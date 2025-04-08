@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>守備紀錄</title>
+  <style>
+    .position-wrap::after {
+      content: attr(data-seq);
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: var(--highlight-color);
+      color: #000;
+      font-weight: bold;
+      width: 20px;
+      height: 20px;
+      font-size: 0.75rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    :root {
+      --primary-color: #5EC3E4;
+      --accent-color: #F25A94;
+      --bg-color: #111;
+      --card-color: #222;
+      --text-color: #fff;
+      --highlight-color: #FFD700;
+    }
+    body { font-family: 'Segoe UI', sans-serif; background: #111; color: #fff; max-width: 500px; margin: auto; padding: 1rem; }
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+    .info, .scoreboard { background: #222; padding: 0.6rem; border-radius: 8px; margin-bottom: 1rem; }
+    .scoreboard div { margin-bottom: 0.5rem; }
+    button {
+      width: 100%;
+      padding: 0.6rem;
+      font-size: 1rem;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(145deg, var(--accent-color), #d64880);
+      color: white;
+      font-weight: bold;
+      margin-top: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    button:hover {
+      transform: scale(1.03);
+      box-shadow: 0 0 10px rgba(242, 90, 148, 0.5);
+    }
+    .playbyplay { background:#222; border-radius:8px; padding:0.6rem; margin-top:0.5rem; max-height:150px; overflow-y:auto; }
+    .playbyplay div { white-space: pre-line; font-size: 0.95rem; color: #fff; font-family: monospace; }
+    .position-wrap.active {
+      border: 2px solid var(--highlight-color);
+      border-radius: 12px;
+      background-color: rgba(255, 215, 0, 0.2);
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <h1>守備中</h1>
+  <div class="scoreboard">
+    <div class='field-map' style='position: relative; background: url("守備位置說明-壓縮.png") no-repeat center; background-size: cover; height: 300px; margin-bottom: 1rem;'>
+      <div id="positionSelects" style="position: absolute; inset: 0;"></div>
+    </div>
+    <div>局數：<span id="inning">-</span></div>
+    <div>出局數：<span id="outs">-</span></div>
+    <div>目前得分：<span id="score">-</span></div>
+  </div>
+
+  <button onclick="logEvent('內野安打')">內野安打</button>
+  <button onclick="logEvent('外野安打')">外野安打</button>
+  <button onclick="logEvent('投手失誤')">投手失誤</button>
+  <button onclick="logEvent('野手漏接')">野手漏接</button>
+  <button onclick="logEvent('暴投')">暴投</button>
+  <button onclick="logEvent('捕逸')">捕逸</button>
+  <button onclick="showErrorMenu()">傳球失誤</button>
+  <div id="errorMenu" style="display:none;background:#333;padding:1rem;border-radius:8px;margin-top:0.5rem">
+    <label>選擇失誤位置：</label>
+    <select id="errorPosition"></select>
+    <button onclick="recordError()">確認</button>
+  </div>
+
+  <label style="display:block;margin-top:1rem;color:#aaa;font-size:0.9rem;">這球有幾個出局？</label>
+  <select id="outsThisPlay" style="width:100%;margin-top:0.2rem;padding:0.5rem;font-size:1rem;border-radius:8px;">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="3">3</option>
+  </select>
+  <button onclick="recordSequenceCode()">紀錄守備代碼</button>
+  <button onclick="recordStrikeout()">三振出局（投手）</button>
+  <div class="playbyplay">
+    <div id="logBox"></div>
+  </div>
+
+  <button onclick="location.href='batting.html'">切換攻守</button>
+  <button onclick="location.href='summary.html'">比賽結束</button>
+
+  <script>
+    function logEvent(text) {
+      const logBox = document.getElementById("logBox");
+      const now = new Date();
+      const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+      logBox.textContent += `[${timestamp}] ${text}\n`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    window.onload = () => {
+      document.getElementById("inning").textContent = localStorage.getItem("inning") || '-';
+      document.getElementById("outs").textContent = localStorage.getItem("outs") || '-';
+      document.getElementById("score").textContent = localStorage.getItem("score") || '-';
+    }
+
+    const allPlayers = (() => {
+      const batting = JSON.parse(localStorage.getItem("battingOrder")) || [];
+      const defense = JSON.parse(localStorage.getItem("players")) || [];
+      return Array.from(new Set([...batting, ...defense]));
+    })();
+    const defensePositions = JSON.parse(localStorage.getItem("defensePositions")) || {};
+    const positionMap = {
+      "P": "投手", "C": "捕手", "1B": "一壘", "2B": "二壘",
+      "3B": "三壘", "SS": "游擊", "LF": "左外", "CF": "中外", "RF": "右外",
+      "DH": "指定打擊", "FE": "自由手"
+    };
+
+    const posDiv = document.getElementById("positionSelects");
+    const positionStyles = {
+      P: "left: 45%; top: 60%;",
+      C: "left: 45%; top: 80%;",
+      '1B': "left: 75%; top: 65%;",
+      '2B': "left: 55%; top: 45%;",
+      '3B': "left: 20%; top: 65%;",
+      SS: "left: 35%; top: 45%;",
+      LF: "left: 5%; top: 30%;",
+      CF: "left: 45%; top: 25%;",
+      RF: "left: 85%; top: 30%;",
+      DH: "left: 10%; top: 85%;",
+      FE: "left: 85%; top: 85%;"
+    };
+
+    Object.entries(positionMap).forEach(([pos, label]) => {
+      const wrap = document.createElement("div");
+      wrap.classList.add("position-wrap");
+      wrap.setAttribute("data-pos", pos);
+      wrap.style = `position: absolute; ${positionStyles[pos]} width: 100px; text-align: center; transform: translate(-50%, -50%); cursor: pointer;`;
+      wrap.onclick = () => {
+        if (wrap.classList.contains("active")) {
+          wrap.classList.remove("active");
+          wrap.removeAttribute("data-seq");
+          reorderActiveSequence();
+        } else {
+          wrap.classList.add("active");
+          const current = document.querySelectorAll('.position-wrap.active').length;
+          wrap.setAttribute("data-seq", current);
+        }
+      };
+      const select = document.createElement("select");
+      const title = document.createElement("div");
+      title.textContent = label;
+      title.style = "font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem;";
+      select.style = "width: 100%; font-size: 0.85rem;";
+
+      allPlayers.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        if (defensePositions[pos] === name) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.onchange = () => {
+        defensePositions[pos] = select.value;
+        localStorage.setItem("defensePositions", JSON.stringify(defensePositions));
+      };
+      wrap.appendChild(title);
+      wrap.appendChild(select);
+      posDiv.appendChild(wrap);
+    });
+
+    function showErrorMenu() {
+      const select = document.getElementById("errorPosition");
+      const posMap = {"1B": "一壘手", "2B": "二壘手", "3B": "三壘手", "SS": "游擊手", "LF": "左外野", "CF": "中外野", "RF": "右外野", "P": "投手", "C": "捕手"};
+      select.innerHTML = "";
+      Object.entries(posMap).forEach(([pos, label]) => {
+        const option = document.createElement("option");
+        option.value = pos;
+        option.textContent = label + `（E${pos.slice(0,1) === 'S' ? '6' : pos.slice(0,1)}）`;
+        select.appendChild(option);
+      });
+      document.getElementById("errorMenu").style.display = "block";
+    }
+
+    function recordError() {
+      const pos = document.getElementById("errorPosition").value;
+      const defensePositions = JSON.parse(localStorage.getItem("defensePositions")) || {};
+      const player = defensePositions[pos] || "未知球員";
+      const errorCode = `E${pos.slice(0,1) === 'S' ? '6' : pos.slice(0,1)}`;
+      logEvent(`${player}（${errorCode}）傳球失誤`);
+      document.getElementById("errorMenu").style.display = "none";
+      let stats = JSON.parse(localStorage.getItem("defenseStats")) || {};
+      stats[player] = (stats[player] || 0) + 1;
+      localStorage.setItem("defenseStats", JSON.stringify(stats));
+    }
+
+    function reorderActiveSequence() {
+      const active = Array.from(document.querySelectorAll('.position-wrap.active'));
+      active.forEach((el, index) => {
+        el.setAttribute("data-seq", index + 1);
+      });
+    }
+
+    function recordSequenceCode() {
+      const positionCodeMap = { P: 1, C: 2, '1B': 3, '2B': 4, '3B': 5, SS: 6, LF: 7, CF: 8, RF: 9 };
+      const activeEls = Array.from(document.querySelectorAll('.position-wrap.active'))
+        .sort((a, b) => +a.getAttribute("data-seq") - +b.getAttribute("data-seq"));
+
+      const sequence = activeEls.map(el => positionCodeMap[el.getAttribute("data-pos")] || '?');
+      if (sequence.length > 0) {
+        logEvent(sequence.join('-') + " 守備代碼");
+
+        let outs = parseInt(localStorage.getItem("outs") || "0", 10);
+        const extra = parseInt(document.getElementById("outsThisPlay").value || "1", 10);
+        outs += extra;
+        localStorage.setItem("outs", outs);
+        document.getElementById("outs").textContent = outs;
+
+        if (outs >= 3) {
+          let inning = parseInt(localStorage.getItem("inning") || "1", 10);
+          inning++;
+          localStorage.setItem("inning", inning);
+          localStorage.setItem("outs", 0);
+          document.getElementById("inning").textContent = inning;
+          document.getElementById("outs").textContent = 0;
+          logEvent(`三出局，進入第 ${inning} 局`);
+          setTimeout(() => location.href = "batting.html", 800);
+        }
+
+      } else {
+        logEvent("（無亮燈順序）未紀錄守備代碼");
+      }
+      document.querySelectorAll('.position-wrap.active').forEach(el => el.classList.remove('active'));
+    }
+      function recordStrikeout() {
+      const defensePositions = JSON.parse(localStorage.getItem("defensePositions")) || {};
+      const pitcher = defensePositions["P"] || "投手未知";
+      let stats = JSON.parse(localStorage.getItem("defenseStats")) || {};
+      stats[pitcher] = stats[pitcher] || {};
+      stats[pitcher].PO = (stats[pitcher].PO || 0) + 1;
+      localStorage.setItem("defenseStats", JSON.stringify(stats));
+
+      let outs = parseInt(localStorage.getItem("outs") || "0", 10);
+      outs++;
+      localStorage.setItem("outs", outs);
+      document.getElementById("outs").textContent = outs;
+
+      logEvent(`${pitcher} 三振對手，出局數 +1`);
+
+      if (outs >= 3) {
+        let inning = parseInt(localStorage.getItem("inning") || "1", 10);
+        inning++;
+        localStorage.setItem("inning", inning);
+        localStorage.setItem("outs", 0);
+        document.getElementById("inning").textContent = inning;
+        document.getElementById("outs").textContent = 0;
+        logEvent(`三出局，進入第 ${inning} 局`);
+        setTimeout(() => location.href = "batting.html", 800);
+      }
+    }
+  </script>
+</body>
+</html>
