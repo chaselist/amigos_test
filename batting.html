@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打擊紀錄</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #111; color: #fff; max-width: 500px; margin: auto; padding: 1rem; }
+    h1 { text-align: center; color: #F25A94; }
+    .info, .scoreboard { background: #222; padding: 0.6rem; border-radius: 8px; margin-bottom: 1rem; position: relative; }
+    .info { display: flex; align-items: center; justify-content: space-between; }
+    .bases { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; justify-items: center; margin-bottom: 1rem; }
+    .base { width: 60px; height: 60px; border-radius: 50%; background: #333; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #fff; position: relative; cursor: pointer; }
+    .base.active { background-color: #5EC3E4; color: #111; }
+    .base-menu { position: absolute; display: none; flex-direction: column; background: #fff; color: #000; padding: 0.5rem; border-radius: 6px; top: 70px; z-index: 100; }
+    .base-menu.show { display: flex; }
+    .base-menu button { margin: 2px 0; padding: 6px 8px; font-size: 1rem; background: #F25A94; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; }
+    select, button { width: 100%; padding: 0.6rem; font-size: 1rem; border-radius: 8px; border: none; margin-bottom: 1rem; }
+    button { background-color: #F25A94; color: white; font-weight: bold; cursor: pointer; }
+    #changeBtn { padding: 0.3rem 0.6rem; font-size: 0.8rem; background-color: #5EC3E4; color: #000; border-radius: 6px; width: auto; height: 30px; line-height: 1; }
+    #changeMenu { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #222; border: 2px solid #5EC3E4; padding: 1rem; border-radius: 10px; z-index: 10; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 5; }
+    #endBtn { background-color: #444; width: 100%; font-size: 1.2rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>比賽進行中</h1>
+  <div class="info">
+    <span>目前打者：<span id="currentBatter">-</span></span>
+    <button id="changeBtn">換人</button>
+  </div>
+  <div class="scoreboard">
+    <div>下一棒：<span id="nextBatter">-</span>　再下一棒：<span id="nextNextBatter">-</span></div>
+    <div>局數：<span id="inning">1</span>　得分：<span id="score">0</span>　出局數：<span id="outs">0</span></div>
+  </div>
+  
+  <label for="result">打席結果：</label>
+  <select id="result">
+    <option value="">請選擇</option>
+    <option value="一安">一安（手動進壘）</option>
+    <option value="二安">二安（手動進壘）</option>
+    <option value="三安">三安（手動進壘）</option>
+    <option value="全壘打">全壘打</option>
+    <option value="觸身">觸身</option>
+    <option value="保送">保送</option>
+    <option value="三振">三振</option>
+    <option value="內滾">內滾</option>
+    <option value="外飛">外飛</option>
+    <option value="野選">野選（手動進壘）</option>
+    <option value="失誤上壘">失誤上壘（手動進壘）</option>
+    <option value="雙殺">雙殺（手動進壘）</option>
+    <option value="三殺">三殺</option>
+    <option value="犧飛">犧飛（壘包手動選，得一分）</option>
+  </select>
+  <div class="bases">
+    <div class="base" id="1B" onclick="toggleBase('1B')" oncontextmenu="showStealMenu(event, '1B'); return false;">1B<div class="base-menu" id="menu-1B"></div></div>
+    <div class="base" id="2B" onclick="toggleBase('2B')" oncontextmenu="showStealMenu(event, '2B'); return false;">2B<div class="base-menu" id="menu-2B"></div></div>
+    <div class="base" id="3B" onclick="toggleBase('3B')" oncontextmenu="showStealMenu(event, '3B'); return false;">3B<div class="base-menu" id="menu-3B"></div></div>
+    <div class="base" id="home" oncontextmenu="showHomeScoreMenu(event); return false;">得分<div class="base-menu" id="menu-home"></div></div>
+  </div>
+  <button id="nextBtn" onclick="nextBatter()">下一棒</button>
+
+  <!-- 文字轉播區移到這裡 -->
+  <div class="playbyplay" style="background:#222;border-radius:8px;padding:0.6rem;margin-top:0.5rem;max-height:150px;overflow-y:auto;">
+    <div id="logBox" style="white-space:pre-line;font-size:0.95rem;color:#fff;font-family:monospace;"></div>
+  </div>
+  <button id="endBtn" onclick="location.href='summary.html'">比賽結束</button>
+  <div id="overlay"></div>
+  <div id="changeMenu">
+    <label for="substituteSelect">請選擇要換上的球員：</label>
+    <select id="substituteSelect"></select>
+    <button id="confirmChange">確認</button>
+    <button id="cancelChange" style="background:#aaa;color:#000">取消</button>
+  </div>
+
+  <script>
+let currentIndex = 0;
+let amigoPlayers = ["林皓瑋", "陳冠廷", "黃昱愷", "楊念儒", "謝琮諺", "黃浩勝", "施維恆", "李政達", "陳重任", "曾憲奎", "陳啟明", "莊智凱", "林家仰", "周易村", "江長運", "黃崇祐", "吳俊洲", "林楷皓", "張友銘"];
+let savedPlayers = JSON.parse(localStorage.getItem('players')) || [];
+let allPlayers = Array.from(new Set([...amigoPlayers, ...savedPlayers]));
+localStorage.setItem('players', JSON.stringify(allPlayers));
+let battingOrder = JSON.parse(localStorage.getItem('battingOrder'));
+if (!battingOrder || battingOrder.length === 0) {
+  battingOrder = allPlayers.slice(0, 9);
+  localStorage.setItem('battingOrder', JSON.stringify(battingOrder));
+}
+updateBatterDisplay();
+    let usedSubstitutes = [];
+
+    function updateBatterDisplay() {
+      document.getElementById("currentBatter").textContent = battingOrder[currentIndex] || '-';
+      document.getElementById("nextBatter").textContent = battingOrder[(currentIndex + 1) % battingOrder.length] || '-';
+      document.getElementById("nextNextBatter").textContent = battingOrder[(currentIndex + 2) % battingOrder.length] || '-';
+    }
+
+    function logEvent(text) {
+      const logBox = document.getElementById("logBox");
+      const now = new Date();
+      const timestamp = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+      logBox.textContent += `[${timestamp}] ${text}\n`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function showHomeScoreMenu(event) {
+      event.preventDefault();
+      const menu = document.getElementById("menu-home");
+      menu.innerHTML = "";
+      [1, 2, 3].forEach(num => {
+        const btn = document.createElement("button");
+        btn.textContent = `+${num}`;
+        btn.onclick = () => {
+          const scoreEl = document.getElementById("score");
+          scoreEl.textContent = parseInt(scoreEl.textContent) + num;
+          logEvent(`人工加分 +${num}`);
+          menu.classList.remove("show");
+        };
+        menu.appendChild(btn);
+      });
+      document.querySelectorAll('.base-menu').forEach(m => m.classList.remove('show'));
+      menu.classList.add('show');
+    }
+
+    function toggleBase(baseId) {
+  const base = document.getElementById(baseId);
+  base.classList.toggle('active');
+}
+
+function showStealMenu(event, baseId) {
+  event.preventDefault();
+  const menu = document.getElementById('menu-' + baseId);
+  menu.innerHTML = '';
+  const stealBtn = document.createElement('button');
+  stealBtn.textContent = baseId === '3B' ? '盜本壘' : '盜壘';
+  stealBtn.onclick = () => {
+    pushRunner(baseId);
+    menu.classList.remove('show');
+  };
+  const outBtn = document.createElement('button');
+  outBtn.textContent = '盜失';
+  outBtn.onclick = () => {
+    document.getElementById(baseId).classList.remove('active');
+    menu.classList.remove('show');
+    let outsEl = document.getElementById("outs");
+    let outs = parseInt(outsEl.textContent);
+    outs++;
+    outsEl.textContent = Math.min(outs, 3);
+    logEvent(`${baseId} 跑者盜壘失敗出局`);
+    if (outs >= 3) {
+      location.href = "defense.html";
+    }
+  };
+  menu.appendChild(stealBtn);
+  menu.appendChild(outBtn);
+  document.querySelectorAll('.base-menu').forEach(m => m.classList.remove('show'));
+  menu.classList.add('show');
+}
+
+function pushRunner(fromBaseId) {
+  const nextBaseMap = { '1B': '2B', '2B': '3B', '3B': 'home' };
+  const fromBase = document.getElementById(fromBaseId);
+  const toBaseId = nextBaseMap[fromBaseId];
+  const toBase = document.getElementById(toBaseId);
+
+  if (fromBase.classList.contains('active')) {
+    fromBase.classList.remove('active');
+    if (toBaseId === 'home') {
+      let scoreEl = document.getElementById("score");
+      scoreEl.textContent = parseInt(scoreEl.textContent) + 1;
+      logEvent(`${fromBaseId} 跑者盜壘得分`);
+    } else {
+      toBase.classList.add('active');
+      logEvent(`${fromBaseId} 跑者盜上 ${toBaseId}`);
+    }
+  }
+}
+
+function nextBatter() {
+  const result = document.getElementById("result").value;
+  const outsEl = document.getElementById("outs");
+  const scoreEl = document.getElementById("score");
+  let outs = parseInt(outsEl.textContent);
+  let score = parseInt(scoreEl.textContent);
+  const batter = battingOrder[currentIndex];
+
+  if (!result) return alert("請先選擇打席結果");
+
+  if (["三振", "內滾", "外飛", "野選"].includes(result)) {
+    outs++;
+    logEvent(`${batter} ${result} 出局`);
+  } else if (result === "三殺") {
+    outs += 3;
+    logEvent(`${batter} 三殺出局`);
+  } else if (result === "雙殺") {
+    outs += 2;
+    logEvent(`${batter} 雙殺出局`);
+  } else if (result === "全壘打") {
+    let runs = 1;
+    ["1B", "2B", "3B"].forEach(id => {
+      if (document.getElementById(id).classList.contains("active")) {
+        runs++;
+        document.getElementById(id).classList.remove("active");
+      }
+    });
+    score += runs;
+    logEvent(`${batter} 全壘打！共 ${runs} 分`);
+  } else if (["觸身", "保送"].includes(result)) {
+    const bases = ["1B", "2B", "3B"];
+    for (let i = bases.length - 1; i >= 0; i--) {
+      if (document.getElementById(bases[i]).classList.contains("active")) {
+        if (bases[i] === "3B") score++;
+        else document.getElementById(bases[i + 1]).classList.add("active");
+        document.getElementById(bases[i]).classList.remove("active");
+      }
+    }
+    document.getElementById("1B").classList.add("active");
+    logEvent(`${batter} ${result} 上壘`);
+  } else if (result === "犧飛") {
+    outs++;
+    score++;
+    logEvent(`${batter} 犧牲飛球打點成功`);
+  } else {
+    logEvent(`${batter} ${result}`);
+  }
+
+  document.getElementById("result").value = "";
+  outsEl.textContent = Math.min(outs, 3);
+  scoreEl.textContent = score;
+
+  currentIndex = (currentIndex + 1) % battingOrder.length;
+  updateBatterDisplay();
+  
+
+  if (outs >= 3) {
+    location.href = "defense.html";
+  }
+}
+  document.getElementById("changeBtn").addEventListener("click", () => {
+  const availableSubs = allPlayers.filter(p => !battingOrder.includes(p) && !usedSubstitutes.includes(p));
+  const substituteSelect = document.getElementById("substituteSelect");
+  substituteSelect.innerHTML = "";
+  availableSubs.forEach(player => {
+    const option = document.createElement("option");
+    option.value = player;
+    option.textContent = player;
+    substituteSelect.appendChild(option);
+  });
+  document.getElementById("changeMenu").style.display = "block";
+  document.getElementById("overlay").style.display = "block";
+});
+
+document.getElementById("confirmChange").addEventListener("click", () => {
+  const newPlayer = document.getElementById("substituteSelect").value;
+  if (newPlayer) {
+    usedSubstitutes.push(newPlayer);
+    battingOrder[currentIndex] = newPlayer;
+    
+    // 已刪除打序欄位，不再更新
+    logEvent(`換上 ${newPlayer} 打擊`);
+  }
+  document.getElementById("changeMenu").style.display = "none";
+  document.getElementById("overlay").style.display = "none";
+});
+
+document.getElementById("cancelChange").addEventListener("click", () => {
+  document.getElementById("changeMenu").style.display = "none";
+  document.getElementById("overlay").style.display = "none";
+});
+
+window.onload = () => {
+  updateBatterDisplay();
+  const prevInning = parseInt(localStorage.getItem('inning')) || 0;
+  const newInning = prevInning + 1;
+  localStorage.setItem('inning', newInning);
+  document.getElementById("inning").textContent = newInning;
+  
+  // 移除不存在的元素更新，避免錯誤
+};
+</script>
+</body>
+</html>
