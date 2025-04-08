@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amigo 比賽首頁</title>
+
+  <!-- 加入 PWA Icon 與 manifest 設定 -->
+  <link rel="manifest" href="manifest.json?v=0423">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#4ec1e0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <style>
+    body {
+      background: #111;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 1rem;
+      margin: 0;
+      color: white;
+    }
+    .section {
+      background: #1e1e1e;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      margin: auto;
+      padding: 2rem;
+    }
+    h2 {
+      text-align: center;
+      color: #ff4081;
+    }
+    label {
+      display: inline-block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #f35fa4;
+      color: white;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #e91e63;
+    }
+    #lineup div {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    select {
+      flex: 1;
+    }
+    select:last-child {
+      flex: 0.3;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .input-row input[type="text"] {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="section" id="startSection">
+    <h2>Amigo X 世壯運 賽事紀錄</h2>
+    <label>比賽名稱：</label>
+    <input type="text" id="gameName" placeholder="2025/5/18 vs XXX隊">
+
+    <div style="margin-bottom: 1rem;">
+      <label><input type="radio" name="teamRole" value="home"> 主隊</label>
+      <label><input type="radio" name="teamRole" value="away"> 客隊</label>
+      <label><input type="radio" name="ballType" value="baseball" checked> 棒球</label>
+      <label><input type="radio" name="ballType" value="softball"> 壘球</label>
+    </div>
+
+    <label>新增球員姓名：</label>
+    <div class="input-row">
+      <input type="text" id="newPlayer" placeholder="Amigo!大勝利！">
+      <button onclick="addPlayer()">+</button>
+    </div>
+
+    <label>請選擇打序：</label>
+    <div id="lineup"></div>
+
+    <label>先發投手：</label>
+    <select id="startingPitcher">
+      <option>請選擇</option>
+    </select>
+
+    <button onclick="startGame()">開始比賽</button>
+  </div>
+
+  <script>
+    const players = ["林皓瑋", "陳冠廷", "黃昱愷", "楊念儒", "謝琮諺", "黃浩勝", "施維恆", "李政達", "陳重任", "曾憲奎", "陳啟明", "莊智凱", "林家仰", "周易村", "江長運", "黃崇祐", "吳俊洲", "林楷皓", "張友銘"];
+    const positions = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "FE", "DH"];
+
+    let lineupData = [];
+
+    function addPlayer() {
+      const input = document.getElementById("newPlayer");
+      const name = input.value.trim();
+      if (name && !players.includes(name)) {
+        players.push(name);
+        renderLineup();
+      }
+      input.value = '';
+    }
+
+    function renderLineup() {
+      const lineupDiv = document.getElementById("lineup");
+      const pitcherSelect = document.getElementById("startingPitcher");
+      const count = document.querySelector('input[name="ballType"]:checked')?.value === 'softball' ? 12 : 9;
+      lineupData.length = count;
+
+      lineupDiv.innerHTML = '';
+      pitcherSelect.innerHTML = '<option>請選擇</option>';
+
+      const usedPlayers = new Set(lineupData.map(l => l?.player).filter(Boolean));
+      const usedPositions = new Set(lineupData.map(l => l?.position).filter(Boolean));
+
+      players.forEach(name => {
+  const option = document.createElement('option');
+  option.textContent = name;
+  pitcherSelect.appendChild(option);
+});
+
+
+      for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+
+        const batterSelect = document.createElement('select');
+        const availablePlayers = players.filter(p => !usedPlayers.has(p) || lineupData[i]?.player === p);
+        batterSelect.innerHTML = `<option value="">第 ${i + 1} 棒 - 請選擇</option>` +
+          availablePlayers.map(p => `<option value="${p}" ${lineupData[i]?.player === p ? 'selected' : ''}>${p}</option>`).join('');
+
+        batterSelect.addEventListener('change', () => {
+          lineupData[i] = lineupData[i] || {};
+          lineupData[i].player = batterSelect.value;
+          renderLineup();
+        });
+
+        const posSelect = document.createElement('select');
+        const availablePositions = positions.filter(pos => !usedPositions.has(pos) || lineupData[i]?.position === pos);
+        posSelect.innerHTML = `<option value="">守備位置</option>` +
+          availablePositions.map(pos => `<option value="${pos}" ${lineupData[i]?.position === pos ? 'selected' : ''}>${pos}</option>`).join('');
+
+        posSelect.addEventListener('change', () => {
+          lineupData[i] = lineupData[i] || {};
+          lineupData[i].position = posSelect.value;
+          renderLineup();
+        });
+
+        div.appendChild(batterSelect);
+        div.appendChild(posSelect);
+        lineupDiv.appendChild(div);
+      }
+    }
+
+    function startGame() {
+      const role = document.querySelector('input[name="teamRole"]:checked')?.value;
+      if (!role) return alert("請選擇主客隊！");
+      window.location.href = role === 'home' ? 'defense.html' : 'batting.html';
+    }
+
+    document.querySelectorAll('input[name="ballType"]').forEach(radio => {
+      radio.addEventListener('change', renderLineup);
+    });
+
+    renderLineup();
+  </script>
+</body>
+</html>

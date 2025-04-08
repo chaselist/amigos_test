@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js?v=0423"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>比賽紀錄總結</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=0423"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 1rem;
+      max-width: 500px;
+      margin: auto;
+    }
+    h1 {
+      color: #5EC3E4;
+      text-align: center;
+    }
+    .section-title {
+      color: #F25A94;
+      margin-top: 2rem;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      text-align: center;
+      border: 1px solid #333;
+      word-break: break-word;
+    }
+    th {
+      background-color: #222;
+      color: #FFD700;
+    }
+    td {
+      background-color: #1a1a1a;
+    }
+    .button-container {
+      margin-top: 2rem;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .button-container button {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    .download-button {
+      background: #5EC3E4;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+  <h1>比賽紀錄總結</h1>
+
+  <div class="section-title">比賽計分板</div>
+  <table id="scoreTable">
+    <thead>
+      <tr><th style="min-width: 60px">隊伍</th></tr>
+    </thead>
+    <tbody id="inningScores"></tbody>
+  </table>
+
+  <div class="section-title">打擊成績</div>
+  <table id="battingTable"></table>
+
+  <div class="section-title">守備成績</div>
+  <table id="defenseTable"></table>
+
+  <div class="button-container">
+    <button class="download-button" onclick="downloadImage()">下載圖片</button>
+    <button class="download-button" onclick="downloadPDF()">匯出成 PDF</button>
+  </div>
+
+  <script>
+    function clearStats() {
+      localStorage.removeItem("battingStats");
+      localStorage.removeItem("defenseStats");
+      localStorage.removeItem("score");
+      localStorage.removeItem("opponentScore");
+      localStorage.removeItem("opponentHits");
+      localStorage.removeItem("opponentErrors");
+      localStorage.removeItem("inningScores");
+      localStorage.removeItem("opponentInningScores");
+    }
+
+    function loadStats() {
+      const battingData = JSON.parse(localStorage.getItem("battingStats")) || {};
+      const defenseData = JSON.parse(localStorage.getItem("defenseStats")) || {};
+      const score = localStorage.getItem("score") || "-";
+      const opponentScore = localStorage.getItem("opponentScore") || "-";
+      const opponentHits = localStorage.getItem("opponentHits") || "-";
+      const opponentErrors = localStorage.getItem("opponentErrors") || "-";
+      const inningScores = JSON.parse(localStorage.getItem("inningScores")) || [];
+      const opponentInningScores = JSON.parse(localStorage.getItem("opponentInningScores")) || [];
+
+      const inningScoreRow = document.getElementById("inningScores");
+      if (inningScoreRow) {
+        const maxInnings = Math.max(inningScores.length, opponentInningScores.length);
+
+        const headerRow = document.querySelector("#scoreTable thead tr");
+        for (let i = 0; i < maxInnings; i++) {
+          const th = document.createElement("th");
+          th.textContent = i + 1;
+          headerRow.appendChild(th);
+        }
+        ["R", "H", "E"].forEach(label => {
+          const th = document.createElement("th");
+          th.textContent = label;
+          headerRow.appendChild(th);
+        });
+
+        const amigoRow = document.createElement("tr");
+        amigoRow.innerHTML = `<td>Amigo</td>` + inningScores.map(s => `<td>${s}</td>`).join("") + `<td>${score}</td><td>-</td><td>-</td>`;
+        inningScoreRow.appendChild(amigoRow);
+
+        const opponentRow = document.createElement("tr");
+        opponentRow.innerHTML = `<td>對手</td>` + opponentInningScores.map(s => `<td>${s}</td>`).join("") + `<td>${opponentScore}</td><td>${opponentHits}</td><td>${opponentErrors}</td>`;
+        inningScoreRow.appendChild(opponentRow);
+      }
+
+      const bt = document.getElementById("battingTable");
+      bt.innerHTML = `<tr><th>球員</th><th>打席</th><th>安打</th><th>出局</th><th>四壞</th><th>盜壘</th><th>犧飛</th></tr>` +
+        Object.entries(battingData).map(([name, d]) =>
+          `<tr><td>${name}</td><td>${d.PA || 0}</td><td>${d.hit || 0}</td><td>${d.out || 0}</td><td>${d.bb || 0}</td><td>${d.sb || 0}</td><td>${d.sf || 0}</td></tr>`).join("");
+
+      const dt = document.getElementById("defenseTable");
+      dt.innerHTML = `<tr><th>球員</th><th>刺殺 (PO)</th><th>助殺 (A)</th><th>失誤 (E)</th></tr>` +
+        Object.entries(defenseData).map(([name, d]) =>
+          `<tr><td>${name}</td><td>${d.PO || 0}</td><td>${d.A || 0}</td><td>${d.E || 0}</td></tr>`).join("");
+    }
+
+    function downloadImage() {
+      html2canvas(document.body).then(canvas => {
+        canvas.toBlob(function(blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = '比賽紀錄總結.png';
+          link.href = url;
+          link.click();
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      });
+    }
+
+    function downloadPDF() {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("PDF 模組尚未載入，請稍後再試。");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      html2canvas(document.body).then(canvas => {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF();
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save("比賽紀錄總結.pdf");
+        clearStats();
+      });
+    }
+
+    window.addEventListener("load", () => {
+      const firstVisit = sessionStorage.getItem("alreadyVisited");
+      if (!firstVisit) {
+        clearStats();
+        sessionStorage.setItem("alreadyVisited", "yes");
+      }
+      loadStats();
+    });
+  </script>
+</body>
+</html>
