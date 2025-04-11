@@ -4,17 +4,18 @@
   <title>打擊紀錄</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      overflow: hidden;
-      background-color: #121212;
-      color: white;
-      font-family: sans-serif;
-    }main {
-  display: flex;
-  height: 100vh;
-}
+  margin: 0;
+  padding: 0;
+  background-color: #121212;
+  color: white;
+  font-family: sans-serif;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}main {
+
+display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 10px; padding: 10px; }
 
 #canvas-area {
   flex: 5;
@@ -110,7 +111,8 @@
   padding: 10px;
 }
 
-  </style>
+@media screen and (orientation: portrait) { body::before { content: '請將裝置轉為橫式以進行操作'; display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; background: #121212; color: #fff; font-size: 20px; padding: 20px; text-align: center; } main, #canvas-area, #controls, #popup, #atbat-popup { display: none !important; } } </style>
+
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2196f3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
