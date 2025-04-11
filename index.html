@@ -1,192 +1,261 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
+<!DOCTYPE html><html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Amigo 比賽首頁</title>
-
-  <!-- 加入 PWA Icon 與 manifest 設定 -->
-  <link rel="manifest" href="manifest.json?v=0423">
-  <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="theme-color" content="#4ec1e0">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-
+  <title>打擊紀錄</title>
   <style>
     body {
-      background: #111;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 1rem;
-      margin: 0;
+      background-color: #121212;
       color: white;
-    }
-    .section {
-      background: #1e1e1e;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-      max-width: 600px;
-      margin: auto;
-      padding: 2rem;
-    }
-    h2 {
-      text-align: center;
-      color: #ff4081;
-    }
-    label {
-      display: inline-block;
-      margin-bottom: 0.5rem;
-      font-weight: bold;
-    }
-    input[type="text"], select {
-      width: 100%;
-      padding: 0.5rem;
-      margin-bottom: 1rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #f35fa4;
-      color: white;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #e91e63;
-    }
-    #lineup div {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-    select {
-      flex: 1;
-    }
-    select:last-child {
-      flex: 0.3;
-    }
-    .input-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    .input-row input[type="text"] {
-      flex: 1;
-    }
+      font-family: sans-serif;
+    }.btn-light {
+  padding: 12px 18px;
+  margin: 6px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #1e1e1e;
+  color: white;
+  transition: 0.2s;
+}
+
+.btn-light:hover {
+  background-color: #2196f3;
+  color: white;
+}
+
+.btn-light.selected {
+  background: #ff2e7a;
+  color: white;
+  font-weight: bold;
+}
+
+main {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+}
+
+#canvas-area {
+
+flex: 5; position: relative; display: flex; align-items: center; justify-content: center; border: 1px dashed #666; background: #1e1e1e; max-width: 950px; aspect-ratio: 16 / 9; }
+
+#field-bg, #hitCanvas {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#controls {
+
+flex: 3; background-color: #1e1e1e; padding: 10px; border-radius: 6px; height: 100%; max-height: 600px; overflow-y: auto; }
+
+#controls h4 {
+  color: #ff2e7a;
+}
+
+#log-area {
+  height: 400px;
+  overflow-y: auto;
+  background: #2c2c2c;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+#atbat-popup {
+  display:none;
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#1e1e1e;
+  border-top:2px solid #2196f3;
+  padding:10px;
+  z-index:9999;
+  font-size:14px;
+  pointer-events:auto;
+  color:white;
+}
+
+#popup {
+  position:absolute;
+  right:20px;
+  top:20px;
+  background:#1e1e1e;
+  box-shadow:0 0 5px rgba(0,0,0,0.5);
+  border-radius:8px;
+  padding:8px;
+  z-index:10;
+}
+
+#popup button:last-child {
+  background:#ff2e7a;
+  color:white;
+}
+  
+@media screen and (max-width: 900px) and (orientation: landscape) {
+  main {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  #canvas-area {
+    flex: 5;
+    max-height: 100vh;
+    aspect-ratio: auto;
+  }
+
+  #controls {
+    flex: 3;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  #log-area {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  #atbat-popup {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+}
+
   </style>
 </head>
 <body>
-  <div class="section" id="startSection">
-    <h2>Amigo X 世壯運 賽事紀錄</h2>
-    <label>比賽名稱：</label>
-    <input type="text" id="gameName" placeholder="2025/5/18 vs XXX隊">
-
-    <div style="margin-bottom: 1rem;">
-      <label><input type="radio" name="teamRole" value="home"> 主隊</label>
-      <label><input type="radio" name="teamRole" value="away"> 客隊</label>
-      <label><input type="radio" name="ballType" value="baseball" checked> 棒球</label>
-      <label><input type="radio" name="ballType" value="softball"> 壘球</label>
+  <main>
+    <div id="canvas-area">
+      <img src="https://cdn.ttv.com.tw/manasystem/FileData/News/1ee242e9-56c7-4851-a39e-66789603f1db.jpg" id="field-bg">
+      <canvas id="hitCanvas" width="900" height="500"></canvas>
+      <div id="popup">
+        <button class="btn-light" onclick="selectResult('安打')">安打</button>
+        <button class="btn-light" onclick="selectResult('接殺')">接殺</button>
+        <button class="btn-light" onclick="clearCanvas()">重畫</button>
+      </div>
     </div>
-
-    <label>新增球員姓名：</label>
-    <div class="input-row">
-      <input type="text" id="newPlayer" placeholder="Amigo!大勝利！">
-      <button onclick="addPlayer()">+</button>
+    <div id="controls">
+      <h4>打席紀錄</h4>
+      <div id="log-area"></div>
     </div>
+  </main>  <div id="atbat-popup">
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      <div style="flex:1; min-width:140px;">
+        <strong>打點數</strong><br>
+        <button class="btn-light" onclick="setAtbat('打點', 0, this)">0</button>
+        <button class="btn-light" onclick="setAtbat('打點', 1, this)">1</button>
+        <button class="btn-light" onclick="setAtbat('打點', 2, this)">2</button>
+        <button class="btn-light" onclick="setAtbat('打點', 3, this)">3</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>上到哪壘</strong><br>
+        <button class="btn-light" onclick="setAtbat('壘包', '一', this)">一</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '二', this)">二</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '三', this)">三</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '本', this)">本</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '出局', this)">出局</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>盜壘</strong><br>
+        <button class="btn-light" onclick="setAtbat('盜壘', '無', this)">無</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '成功1', this)">成功1</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '成功2', this)">成功2</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '失敗', this)">失敗</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>出局數</strong><br>
+        <button class="btn-light" onclick="setAtbat('出局數', 0, this)">0</button>
+        <button class="btn-light" onclick="setAtbat('出局數', 1, this)">1</button>
+        <button class="btn-light" onclick="setAtbat('出局數', 2, this)">2</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>是否得分</strong><br>
+        <button class="btn-light" onclick="setAtbat('得分', '是', this)">✔ 有</button>
+        <button class="btn-light" onclick="setAtbat('得分', '否', this)">✘ 沒有</button>
+      </div>
+    </div>
+    <div style="text-align:right; margin-top:10px;">
+      <button onclick="saveAtbatData()" style="background:#2196f3;color:white;padding:5px 10px;border:none;border-radius:5px;">✅ 儲存紀錄</button>
+      <button onclick="closeAtbatPopup()" style="background:#444;color:white;padding:5px 10px;border:none;border-radius:5px;">🔄 取消</button>
+    </div>
+  </div>  <script>
+    const atbatHistory = [];
+    let atbatData = {};
 
-    <label>請選擇打序：</label>
-    <div id="lineup"></div>
-
-    <label>先發投手：</label>
-    <select id="startingPitcher">
-      <option>請選擇</option>
-    </select>
-
-    <button onclick="startGame()">開始比賽</button>
-  </div>
-
-  <script>
-    const players = ["林皓瑋", "陳冠廷", "黃昱愷", "楊念儒", "謝琮諺", "黃浩勝", "施維恆", "李政達", "陳重任", "曾憲奎", "陳啟明", "莊智凱", "林家仰", "周易村", "江長運", "黃崇祐", "吳俊洲", "林楷皓", "張友銘"];
-    const positions = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "FE", "DH"];
-
-    let lineupData = [];
-
-    function addPlayer() {
-      const input = document.getElementById("newPlayer");
-      const name = input.value.trim();
-      if (name && !players.includes(name)) {
-        players.push(name);
-        renderLineup();
-      }
-      input.value = '';
-    }
-
-    function renderLineup() {
-      const lineupDiv = document.getElementById("lineup");
-      const pitcherSelect = document.getElementById("startingPitcher");
-      const count = document.querySelector('input[name="ballType"]:checked')?.value === 'softball' ? 12 : 9;
-      lineupData.length = count;
-
-      lineupDiv.innerHTML = '';
-      pitcherSelect.innerHTML = '<option>請選擇</option>';
-
-      const usedPlayers = new Set(lineupData.map(l => l?.player).filter(Boolean));
-      const usedPositions = new Set(lineupData.map(l => l?.position).filter(Boolean));
-
-      players.forEach(name => {
-  const option = document.createElement('option');
-  option.textContent = name;
-  pitcherSelect.appendChild(option);
-});
-
-
-      for (let i = 0; i < count; i++) {
-        const div = document.createElement('div');
-
-        const batterSelect = document.createElement('select');
-        const availablePlayers = players.filter(p => !usedPlayers.has(p) || lineupData[i]?.player === p);
-        batterSelect.innerHTML = `<option value="">第 ${i + 1} 棒 - 請選擇</option>` +
-          availablePlayers.map(p => `<option value="${p}" ${lineupData[i]?.player === p ? 'selected' : ''}>${p}</option>`).join('');
-
-        batterSelect.addEventListener('change', () => {
-          lineupData[i] = lineupData[i] || {};
-          lineupData[i].player = batterSelect.value;
-          renderLineup();
-        });
-
-        const posSelect = document.createElement('select');
-        const availablePositions = positions.filter(pos => !usedPositions.has(pos) || lineupData[i]?.position === pos);
-        posSelect.innerHTML = `<option value="">守備位置</option>` +
-          availablePositions.map(pos => `<option value="${pos}" ${lineupData[i]?.position === pos ? 'selected' : ''}>${pos}</option>`).join('');
-
-        posSelect.addEventListener('change', () => {
-          lineupData[i] = lineupData[i] || {};
-          lineupData[i].position = posSelect.value;
-          renderLineup();
-        });
-
-        div.appendChild(batterSelect);
-        div.appendChild(posSelect);
-        lineupDiv.appendChild(div);
+    function setAtbat(type, value, el) {
+      atbatData[type] = value;
+      if (el) {
+        const group = Array.from(el.parentElement.querySelectorAll('button'));
+        group.forEach(btn => btn.classList.remove('selected'));
+        el.classList.add('selected');
       }
     }
 
-    function startGame() {
-      const role = document.querySelector('input[name="teamRole"]:checked')?.value;
-      if (!role) return alert("請選擇主客隊！");
-      window.location.href = role === 'home' ? 'defense.html' : 'batting.html';
+    function saveAtbatData() {
+      atbatHistory.push({ ...atbatData });
+      updateHistoryTable();
+      clearCanvas();
+      atbatData = {};
+      document.querySelectorAll('#atbat-popup .btn-light').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('atbat-popup').style.display = 'none';
     }
 
-    document.querySelectorAll('input[name="ballType"]').forEach(radio => {
-      radio.addEventListener('change', renderLineup);
+    function closeAtbatPopup() {
+      document.getElementById('atbat-popup').style.display = 'none';
+    }
+
+    function selectResult(result) {
+      document.getElementById('atbat-popup').style.display = 'block';
+    }
+
+    function clearCanvas() {
+      const canvas = document.getElementById('hitCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('popup').style.display = 'block';
+    }
+
+    function updateHistoryTable() {
+      const log = document.getElementById('log-area');
+      log.innerHTML = '';
+      atbatHistory.forEach((record, index) => {
+        const text = `${index + 1}｜打點：${record['打點'] ?? '-'}，壘包：${record['壘包'] ?? '-'}，盜壘：${record['盜壘'] ?? '-'}，出局數：${record['出局數'] ?? '-'}，得分：${record['得分'] ?? '-'}`;
+        const entry = document.createElement('div');
+        entry.textContent = text;
+        entry.style.borderBottom = '1px solid #444';
+        entry.style.padding = '4px 0';
+        log.prepend(entry);
+      });
+    }
+
+    const canvas = document.getElementById('hitCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      ctx.beginPath();
+      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+      drawing = true;
     });
 
-    renderLineup();
-  </script>
-</body>
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      const rect = canvas.getBoundingClientRect();
+      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.strokeStyle = '#ff2e7a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    canvas.addEventListener('pointerup', () => {
+      drawing = false;
+    });
+  </script></body>
 </html>
