@@ -143,8 +143,10 @@
     }
 
     function selectResult(result) {
-      console.log('選擇結果：' + result);
-    }
+  document.getElementById('atbat-popup').style.display = 'block';
+  document.querySelectorAll('#atbat-popup .btn-light').forEach(btn => btn.classList.remove('selected'));
+  atbatData = {};
+}
   </script>  <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js')
