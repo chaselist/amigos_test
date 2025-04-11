@@ -107,6 +107,9 @@ position: absolute; width: 100%; height: 100%; object-fit: contain; display: blo
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2196f3">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196f3">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
   <main>
@@ -120,7 +123,8 @@ position: absolute; width: 100%; height: 100%; object-fit: contain; display: blo
       </div>
     </div>
     <div id="controls">
-      <h4>打擊紀錄</h4>
+  <h4>打擊紀錄</h4>
+  <button class="btn-light" onclick="toggleDiagnostic()">診斷模式</button>
       <div id="log-area"></div>
     </div>
   </main>  <div id="atbat-popup">
@@ -194,11 +198,16 @@ position: absolute; width: 100%; height: 100%; object-fit: contain; display: blo
     }
 
     function clearCanvas() {
-      const canvas = document.getElementById('hitCanvas');
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      document.getElementById('popup').style.display = 'block';
-    }
+  const canvas = document.getElementById('hitCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('popup').style.display = 'block';
+  if (diagnostic) {
+    ctx.fillStyle = 'lime';
+    ctx.font = '14px monospace';
+    ctx.fillText(`Canvas: ${canvas.width}x${canvas.height}`, 10, 20);
+  }
+}
 
     function updateHistoryTable() {
       const log = document.getElementById('log-area');
@@ -218,9 +227,18 @@ position: absolute; width: 100%; height: 100%; object-fit: contain; display: blo
     let drawing = false;
 
     canvas.addEventListener('pointerdown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      ctx.beginPath();
-      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  if (diagnostic) {
+    ctx.fillStyle = 'lime';
+    ctx.font = '12px monospace';
+    ctx.fillText(`Start: (${Math.round(x)}, ${Math.round(y)})`, x + 5, y - 5);
+  }
+  drawing = true;
+});
       drawing = true;
     });
 
@@ -228,14 +246,25 @@ position: absolute; width: 100%; height: 100%; object-fit: contain; display: blo
       if (!drawing) return;
       const rect = canvas.getBoundingClientRect();
       ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-      ctx.strokeStyle = '#ff2e7a';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = diagnostic ? 'lime' : '#ff2e7a';
+      ctx.lineWidth = diagnostic ? 4 : 2;
       ctx.stroke();
     });
 
     canvas.addEventListener('pointerup', () => {
       drawing = false;
     });
+  let diagnostic = false;
+function toggleDiagnostic() {
+  diagnostic = !diagnostic;
+  alert(diagnostic ? '診斷模式已開啟' : '診斷模式已關閉');
+  clearCanvas();
+}
+</script>  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(() => console.log("Service Worker Registered"));
+    }
   </script>  <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js')
