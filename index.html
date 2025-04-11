@@ -1,10 +1,8 @@
-<!DOCTYPE html><html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <title>打擊紀錄</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2196f3">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     body {
       background-color: #121212;
@@ -12,15 +10,34 @@
       font-family: sans-serif;
       margin: 0;
       padding: 0;
-    }main {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-}
-
-#canvas-area {
+    }
+    .btn-light {
+      padding: 12px 18px;
+      margin: 6px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #1e1e1e;
+      color: white;
+      transition: 0.2s;
+    }
+    .btn-light:hover {
+      background-color: #2196f3;
+      color: white;
+    }
+    .btn-light.selected {
+      background: #ff2e7a;
+      color: white;
+      font-weight: bold;
+    }
+    main {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+    }
+    #canvas-area {
   flex: 5;
   position: relative;
   display: flex;
@@ -28,81 +45,72 @@
   justify-content: center;
   border: 1px dashed #666;
   background: #1e1e1e;
-  max-width: 950px;
-  aspect-ratio: 16 / 9;
+  width: 744px;
+  height: 573px;
+  overflow: hidden;
 }
-
-#field-bg, #hitCanvas {
+    #field-bg, #hitCanvas {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  top: 0;
+  left: 0;
+  width: 744px;
+  height: 573px;
   object-fit: contain;
 }
-
-#popup {
-  position:absolute;
-  right:20px;
-  top:20px;
-  background:#1e1e1e;
-  box-shadow:0 0 5px rgba(0,0,0,0.5);
-  border-radius:8px;
-  padding:8px;
-  z-index:10;
-}
-
-.btn-light {
-  padding: 12px 18px;
-  margin: 6px;
-  font-size: 16px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background: #1e1e1e;
-  color: white;
-  transition: 0.2s;
-}
-
-.btn-light:hover {
-  background-color: #2196f3;
-  color: white;
-}
-
-.btn-light.selected {
-  background: #ff2e7a;
-  color: white;
-  font-weight: bold;
-}
-
-#controls {
-  flex: 3;
-  background-color: #1e1e1e;
-  padding: 10px;
-  border-radius: 6px;
-  height: 100%;
-  overflow-y: auto;
-}
-
-#controls h4 {
-  color: #ff2e7a;
-}
-
-#log-area {
-  max-height: 60vh;
-  overflow-y: auto;
-  background: #2c2c2c;
-  padding: 10px;
-  border-radius: 6px;
-}
-
+    #controls {
+      flex: 3;
+      background-color: #1e1e1e;
+      padding: 10px;
+      border-radius: 6px;
+      height: 100%;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    #controls h4 {
+      color: #ff2e7a;
+    }
+    #log-area {
+      height: 400px;
+      overflow-y: auto;
+      background: #2c2c2c;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    #atbat-popup {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1e1e1e;
+      border-top: 2px solid #2196f3;
+      padding: 10px;
+      z-index: 9999;
+      font-size: 14px;
+      pointer-events: auto;
+      color: white;
+    }
+    #popup {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      background: #1e1e1e;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      padding: 8px;
+      z-index: 10;
+    }
+    #popup button:last-child {
+      background: #ff2e7a;
+      color: white;
+    }
   </style>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2196f3">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
   <main>
     <div id="canvas-area">
-      <img src="https://cdn.ttv.com.tw/manasystem/FileData/News/1ee242e9-56c7-4851-a39e-66789603f1db.jpg" id="field-bg">
-      <canvas id="hitCanvas" width="900" height="500"></canvas>
+      <img src="https://i.imgur.com/1SDrkRg.jpeg" id="field-bg">
+      <canvas id="hitCanvas" width="744" height="573"></canvas>
       <div id="popup">
         <button class="btn-light" onclick="selectResult('安打')">安打</button>
         <button class="btn-light" onclick="selectResult('接殺')">接殺</button>
@@ -110,19 +118,132 @@
       </div>
     </div>
     <div id="controls">
-      <h4>打擊紀錄</h4>
+      <h4>打者名字</h4>
+      <input id="batter-name" type="text" style="width:100%;padding:6px;border-radius:6px;border:none;margin-bottom:10px;">
+      <h4>打席紀錄</h4>
       <div id="log-area"></div>
+      <button class="btn-light" onclick="exportData()">⬇ 匯出 JSON</button>
     </div>
-  </main>  <script>
+  </main>
+
+  <div id="atbat-popup">
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      <div style="flex:1; min-width:140px;">
+        <strong>打點數</strong><br>
+        <button class="btn-light" onclick="setAtbat('打點', 0, this)">0</button>
+        <button class="btn-light" onclick="setAtbat('打點', 1, this)">1</button>
+        <button class="btn-light" onclick="setAtbat('打點', 2, this)">2</button>
+        <button class="btn-light" onclick="setAtbat('打點', 3, this)">3</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>上到哪壘</strong><br>
+        <button class="btn-light" onclick="setAtbat('壘包', '一', this)">一</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '二', this)">二</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '三', this)">三</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '本', this)">本</button>
+        <button class="btn-light" onclick="setAtbat('壘包', '出局', this)">出局</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>盜壘</strong><br>
+        <button class="btn-light" onclick="setAtbat('盜壘', '無', this)">無</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '成功1', this)">成功1</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '成功2', this)">成功2</button>
+        <button class="btn-light" onclick="setAtbat('盜壘', '失敗', this)">失敗</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>出局數</strong><br>
+        <button class="btn-light" onclick="setAtbat('出局數', 0, this)">0</button>
+        <button class="btn-light" onclick="setAtbat('出局數', 1, this)">1</button>
+        <button class="btn-light" onclick="setAtbat('出局數', 2, this)">2</button>
+      </div>
+      <div style="flex:1; min-width:140px;">
+        <strong>是否得分</strong><br>
+        <button class="btn-light" onclick="setAtbat('得分', '是', this)">✔ 有</button>
+        <button class="btn-light" onclick="setAtbat('得分', '否', this)">✘ 沒有</button>
+      </div>
+    </div>
+    <div style="text-align:right; margin-top:10px;">
+      <button onclick="saveAtbatData()" style="background:#2196f3;color:white;padding:5px 10px;border:none;border-radius:5px;">✅ 儲存紀錄</button>
+      <button onclick="closeAtbatPopup()" style="background:#444;color:white;padding:5px 10px;border:none;border-radius:5px;">🔄 取消</button>
+    </div>
+  </div>
+
+  <script>
+    const atbatHistory = [];
+    let atbatData = {};
+
+    function setAtbat(type, value, el) {
+      atbatData[type] = value;
+      if (el) {
+        const group = Array.from(el.parentElement.querySelectorAll('button'));
+        group.forEach(btn => btn.classList.remove('selected'));
+        el.classList.add('selected');
+      }
+    }
+
+    function selectResult(result) {
+      atbatData['結果'] = result;
+      const popup = document.getElementById('atbat-popup');
+      popup.style.display = 'block';
+      popup.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function saveAtbatData() {
+      const batter = document.getElementById('batter-name').value.trim();
+      if (batter) atbatData['打者'] = batter;
+      atbatHistory.push({ ...atbatData });
+      updateHistoryTable();
+      clearCanvas();
+      atbatData = {};
+      document.querySelectorAll('#atbat-popup .btn-light').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('atbat-popup').style.display = 'none';
+      document.getElementById('batter-name').value = '';
+    }
+
+    function closeAtbatPopup() {
+      document.getElementById('atbat-popup').style.display = 'none';
+    }
+
+    function clearCanvas() {
+      const canvas = document.getElementById('hitCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('popup').style.display = 'block';
+    }
+
+    function updateHistoryTable() {
+      const log = document.getElementById('log-area');
+      log.innerHTML = '';
+      atbatHistory.forEach((record, index) => {
+        const text = `${index + 1}｜打者：${record['打者'] ?? '-'}，結果：${record['結果'] ?? '-'}，打點：${record['打點'] ?? '-'}，壘包：${record['壘包'] ?? '-'}，盜壘：${record['盜壘'] ?? '-'}，出局數：${record['出局數'] ?? '-'}，得分：${record['得分'] ?? '-'}`;
+        const entry = document.createElement('div');
+        entry.textContent = text;
+        entry.style.borderBottom = '1px solid #444';
+        entry.style.padding = '4px 0';
+        log.prepend(entry);
+      });
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(atbatHistory, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '打擊紀錄.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     const canvas = document.getElementById('hitCanvas');
     const ctx = canvas.getContext('2d');
+
     let drawing = false;
 
     canvas.addEventListener('pointerdown', (e) => {
+      drawing = true;
       const rect = canvas.getBoundingClientRect();
       ctx.beginPath();
       ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-      drawing = true;
     });
 
     canvas.addEventListener('pointermove', (e) => {
@@ -137,25 +258,6 @@
     canvas.addEventListener('pointerup', () => {
       drawing = false;
     });
-
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function selectResult(result) {
-  document.getElementById('atbat-popup').style.display = 'block';
-  document.querySelectorAll('#atbat-popup .btn-light').forEach(btn => btn.classList.remove('selected'));
-  atbatData = {};
-}
-  </script>  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(() => console.log("Service Worker Registered"));
-    }
-  </script>  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(() => console.log("Service Worker Registered"));
-    }
-  </script></body>
+  </script>
+</body>
 </html>
