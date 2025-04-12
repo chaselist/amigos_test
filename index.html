@@ -92,15 +92,18 @@
       color: white;
     }
     #popup {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      background: #1e1e1e;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-      border-radius: 8px;
-      padding: 8px;
-      z-index: 10;
-    }
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e1e;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+}
     #popup button:last-child {
       background: #ff2e7a;
       color: white;
@@ -110,7 +113,7 @@
 <body>
   <main>
     <div id="canvas-area">
-      <img src="https://i.imgur.com/1SDrkRg.jpeg" id="field-bg">
+      <img src="https://i.imgur.com/RKGPPvY.jpeg" id="field-bg">
       <canvas id="hitCanvas" width="744" height="573"></canvas>
       <div id="popup">
         <button class="btn-light" onclick="selectResult('安打')">安打</button>
